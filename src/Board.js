@@ -1,18 +1,17 @@
 import React from 'react';
-import Square from './Square';
+import Form from './Form';
 
 class Board extends React.Component {
+
   // Create the 3 x 3 board
-  createBoard(row, col) {
+  createBoard(row) {
     const board = [];
     let cellCounter = 0;
 
     for (let i = 0; i < row; i += 1) {
       const columns = [];
-      for (let j = 0; j < col; j += 1) {
-        columns.push(this.renderSquare(cellCounter++));
-      }
-      board.push(<div key={i} className="board-row">{columns}</div>);
+      columns.push(this.renderSquare(cellCounter++));
+      board.push(<div key={i}>{columns}</div>);
     }
 
     return board;
@@ -20,16 +19,24 @@ class Board extends React.Component {
 
   renderSquare(i) {
     return (
-      <Square
-        key={i}
-        value={this.props.squares[i]}
-        onClick={() => this.props.onClick(i)}
-      />
+      <div key={i}>
+        {((this.props.answers[i] === "" && !this.props.roundDone) || this.props.judgeMode) &&
+          <Form
+            judgeMode={this.props.judgeMode}
+            players={this.props.players}
+            question={this.props.questions[i]}
+            answer={this.props.answers[i]}
+            onClick={(value) => this.props.onClick(i, value)} />
+        }
+        {((this.props.answers[i] !== "" && !this.props.judgeMode) || (this.props.roundDone && !this.props.judgeMode)) &&
+          <p>{this.props.questions[i]}: {this.props.answers[i]}</p>
+        }
+      </div>
     );
   }
 
   render() {
-    return <div>{this.createBoard(3, 3)}</div>;
+    return <div>{this.createBoard(this.props.blanks)}</div>;
   }
 }
 
