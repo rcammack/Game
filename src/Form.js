@@ -21,26 +21,31 @@ class Form extends React.Component {
 
   render() {
     return (
-      <form onSubmit={this.handleSubmit}>
+      <div>
         {!this.props.judgeMode &&
-          <label>
-            <p>{this.props.question}:</p>
-            <input type="text" value={this.state.value} onChange={this.handleChange} />
-          </label>
+          <form className="ui form" onSubmit={this.handleSubmit}>
+            <div className="field">
+              <label>{this.props.question}:</label>
+              <div className="ui action input" style={{ maxWidth: "500px" }}>
+                <input className="ui input" type="text" placeholder="answer" value={this.state.value} onChange={this.handleChange} />
+                <button className="ui button" value="Submit">Submit</button>
+              </div>
+            </div>
+          </form>
         }
         {this.props.judgeMode &&
-          <label>
-            <div style={{ marginTop: "10px", marginBottom: "10px" }}>
-              <p style={{ display: "inline" }}>{this.props.question}:</p>&nbsp;
-              <p style={{ display: "inline", color: "LightSkyBlue" }}>{this.props.answer}</p>
-            </div>
-            <select value={this.state.value} onChange={this.handleChange}>
-              {this.props.players.map((player) => <option key={player} value={player}>{player}</option>)}
-            </select>
-          </label>
+          <form onSubmit={this.handleSubmit}>
+              <div style={{ marginTop: "10px", marginBottom: "10px" }}>
+                <p style={{ display: "inline" }}>{this.props.question}:</p>&nbsp;
+                <p style={{ display: "inline", color: "Blue" }}>{this.props.answer}</p>
+              </div>
+              <select value={this.state.value} onChange={this.handleChange}>
+                {this.props.players.map((player) => <option key={player} value={player}>{player}</option>)}
+              </select>
+              <input style={{ marginLeft: "12px" }} type="submit" value="Submit" />
+          </form>
         }
-        <input style={{ marginLeft: "12px" }} type="submit" value="Submit" />
-      </form>
+      </div>
     );
   }
 }

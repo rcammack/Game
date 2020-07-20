@@ -21,8 +21,6 @@ class App extends Component {
       createIsDisabled: false,
       startIsDisabled: true,
       gameChannel: null,
-
-      myTurn: false,
     };
 
     this.occupants = 0;
@@ -39,7 +37,7 @@ class App extends Component {
           players.push(msg.message.name);
           this.occupants++;
           var startIsDisabled = true;
-          if (this.occupants > 2) {
+          if (this.occupants > 1) {
             startIsDisabled = false;
           }
           this.setState({
@@ -47,19 +45,16 @@ class App extends Component {
             players: players
           })
         }
-        if (msg.message.start && msg.message.occupants >= 3) {
+        if (msg.message.start && msg.message.occupants >= 2) {
           this.occupants = msg.message.occupants;
+          this.pubnub.subscribe({
+            channels: [msg.message.gameChannel],
+          });
           this.setState({
             isPlaying: msg.message.start,
             players: msg.message.players,
             gameChannel: msg.message.gameChannel,
           })
-          this.pubnub.subscribe({
-            channels: [msg.message.gameChannel],
-            connect : function(){
-              console.log("Connected");
-            },
-          });
         }
       });
     }
@@ -114,7 +109,6 @@ class App extends Component {
     this.setState({
       isRoomCreator: true,
       createIsDisabled: true, // Disable the 'Create' button
-      myTurn: true, // Room creator makes the 1st move
     });
   }
 
@@ -149,77 +143,42 @@ class App extends Component {
     this.roomId = value;
     this.lobbyChannel = 'tictactoelobby--' + this.roomId;
 
-    // Check the number of people in the channel (DEBUG)
-    // this.pubnub.hereNow({
-    //   channels: [this.lobbyChannel],
-    // }).then((response) => {
-    //   //console.log(response.totalOccupancy);
-    //   var people = response.totalOccupancy;
-    //   if (people < 4) {
-    //     if (people > 2) {
-    //       var startIsDisabled = false;
-    //     }
+    this.pubnub.subscribe({
+      channels: [this.lobbyChannel],
+      withPresence: true
+    });
 
-    //     this.setState({
-    //       startIsDisabled: startIsDisabled,
-    //     })
-        this.pubnub.subscribe({
-          channels: [this.lobbyChannel],
-          withPresence: true
-        });
-
-        //get name
-        Swal.fire({
-          position: 'top',
-          input: 'text',
-          allowOutsideClick: false,
-          inputPlaceholder: 'Enter your name',
-          showCancelButton: true,
-          confirmButtonColor: 'rgb(208,33,41)',
-          confirmButtonText: 'OK',
-          width: 275,
-          padding: '0.7em',
-          customClass: {
-            heightAuto: false,
-            popup: 'popup-class',
-            confirmButton: 'join-button-class',
-            cancelButton: 'join-button-class'
-          }
-        }).then((result) => {
-          // Check if the user typed a value in the input field
-          if (result.value) {
-            this.setState({
-              name: result.value,
-            })
-            this.pubnub.publish({
-              message: {
-                name: result.value,
-              },
-              channel: this.lobbyChannel
-            });
-          }
+    //get name
+    Swal.fire({
+      position: 'top',
+      input: 'text',
+      allowOutsideClick: false,
+      inputPlaceholder: 'Enter your name',
+      showCancelButton: true,
+      confirmButtonColor: 'rgb(208,33,41)',
+      confirmButtonText: 'OK',
+      width: 275,
+      padding: '0.7em',
+      customClass: {
+        heightAuto: false,
+        popup: 'popup-class',
+        confirmButton: 'join-button-class',
+        cancelButton: 'join-button-class'
+      }
+    }).then((result) => {
+      // Check if the user typed a value in the input field
+      if (result.value) {
+        this.setState({
+          name: result.value,
         })
-      //}
-      // else {
-      //   // Game in progress
-      //   Swal.fire({
-      //     position: 'top',
-      //     allowOutsideClick: false,
-      //     title: 'Error',
-      //     text: 'Game in progress. Try another room.',
-      //     width: 275,
-      //     padding: '0.7em',
-      //     customClass: {
-      //       heightAuto: false,
-      //       title: 'title-class',
-      //       popup: 'popup-class',
-      //       confirmButton: 'button-class'
-      //     }
-      //   })
-      // }
-    // }).catch((error) => {
-    //   console.log(error);
-    // });
+        this.pubnub.publish({
+          message: {
+            name: result.value,
+          },
+          channel: this.lobbyChannel
+        });
+      }
+    })
   }
 
   onPressStart = (e) => {
@@ -266,8 +225,6 @@ class App extends Component {
       createIsDisabled: false,
       startIsDisabled: true,
       gameChannel: null,
-
-      myTurn: false,
     });
 
     this.occupants = 0;
@@ -281,19 +238,26 @@ class App extends Component {
       <div>
         {!this.state.isPlaying &&
           <div className="lobby">
-            <p>Share this room ID with your friends: {this.roomId}</p>
-            <div>
+            <h1 style={{margin:"auto", marginBottom:"30px"}}>
+              <div style={{ display: "inline" }} className="content">Truth Bomb </div>
+              <i style={{ display: "inline" }} className="bomb icon"></i>
+            </h1>
+            <p style={{margin:"auto", marginBottom:"15px"}}>Share this room ID with your friends: {this.roomId}</p>
+            <div style={{margin:"auto"}}>
               { // no room id yet -> create or join
                 !this.roomId &&
-                <div className="button-container">
+                <div className="ui buttons">
                   <button
-                    className="create-button"
+                    className="ui button"
+                    style={{width:"90px"}}
                     disabled={this.state.createIsDisabled}
                     onClick={(e) => this.onPressCreate()}
                   > Create
                   </button>
+                  <div className="or"></div>
                   <button
-                    className="join-button"
+                    className="ui button"
+                    style={{width:"90px"}}
                     onClick={(e) => this.onPressJoin()}
                   > Join
                   </button>
@@ -302,22 +266,23 @@ class App extends Component {
 
               { // created game and waiting for people to join
                 this.roomId && this.state.isRoomCreator &&
-                <div className="button-container">
+                <div style={{margin:"auto"}}>
                   <button
-                    className="join-button"
+                    className="ui button"
+                    style={{marginBottom:"15px"}}
                     disabled={this.state.startIsDisabled}
                     onClick={(e) => this.onPressStart()}
                   > Start
                   </button>
-                  {this.state.players.map((player, i) => <p key={i}>{player}</p>)}
+                  {this.state.players.map((player, i) => <p style={{textAlign:"center"}} key={i}>{player}</p>)}
                 </div>
               }
 
               { // waiting for roomCreator to start
                 this.roomId != null && !this.state.isRoomCreator &&
                 <div>
-                  <p>Hi, {this.state.name}!</p>
-                  <p>waiting for room creator to start...</p>
+                  <p style={{textAlign:"center"}}>Hi, {this.state.name}!</p>
+                  <p style={{textAlign:"center"}}>waiting for room creator to start...</p>
                 </div>
               }
             </div>
@@ -332,7 +297,6 @@ class App extends Component {
             players={this.state.players}
             occupants={this.occupants}
             isRoomCreator={this.state.isRoomCreator}
-            myTurn={this.state.myTurn}
             endGame={this.endGame}
           />
         }

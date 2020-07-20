@@ -7,23 +7,10 @@ body {
   display: flex;
   flex-direction: column;
   margin-top: 10px;
-  margin-left: auto;
-  min-height: 15vh;
-}
-
-.create-button {
-  margin-right: 5px;
-  width: 4.5em;
-  height: 2.0em;
-}
-
-.join-button {
-  width: 4.5em;
-  height: 2.0em;
 }
 
 .board {
-  width: 500px;
+  width: 400px;
   margin: auto;
   border-style: double;
   padding-left: 10px;

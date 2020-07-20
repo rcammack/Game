@@ -19,7 +19,7 @@ class Board extends React.Component {
 
   renderSquare(i) {
     return (
-      <div key={i}>
+      <div style={{ marginBottom: "10px"}} key={i}>
         {((this.props.answers[i] === "" && !this.props.roundDone) || this.props.judgeMode) &&
           <Form
             judgeMode={this.props.judgeMode}
@@ -29,7 +29,10 @@ class Board extends React.Component {
             onClick={(value) => this.props.onClick(i, value)} />
         }
         {((this.props.answers[i] !== "" && !this.props.judgeMode) || (this.props.roundDone && !this.props.judgeMode)) &&
-          <p>{this.props.questions[i]}: {this.props.answers[i]}</p>
+          <div>
+            <p style={{ display: "inline" }}>{this.props.questions[i]}:</p>&nbsp;
+          <p style={{ display: "inline", color: "Blue" }}>{this.props.answers[i]}</p>
+          </div>
         }
       </div>
     );

@@ -7,6 +7,8 @@ class Game extends React.Component {
   constructor(props) {
     super(props);
 
+    console.log(this.props.gameChannel);
+
     this.userIndex = this.props.players.indexOf(this.props.name);
     this.targetIndex = this.userIndex + 1;
     if (this.targetIndex >= this.props.players.length) {
@@ -15,7 +17,7 @@ class Game extends React.Component {
     var target = this.props.players[this.targetIndex];
 
     // create multidimensional arrays this way for an annoying reason
-    var rows = this.props.occupants; //players
+    var rows = this.props.occupants; //num of players
     var cols = this.props.occupants - 1; //answer blanks
     var answers = [];
     var answerers = [];
@@ -63,6 +65,7 @@ class Game extends React.Component {
 
     this.judgeCount = 0;
     this.gameOver = false;
+    this.players = this.props.players;
   }
 
   componentDidMount() {
@@ -80,7 +83,7 @@ class Game extends React.Component {
       else if (msg.message.judge) {
         this.setState({
           scores: msg.message.scores,
-          judgeMode: msg.message.judge === this.props.players[this.userIndex] ? false : this.state.judgeMode,
+          judgeMode: msg.message.judge === this.players[this.userIndex] ? false : this.state.judgeMode,
         });
 
         this.judgeCount++;
@@ -95,12 +98,12 @@ class Game extends React.Component {
 
       // Start a new game
       else if (msg.message.reset) {
-        this.userIndex = this.props.players.indexOf(this.props.name);
+        this.userIndex = this.players.indexOf(this.props.name);
         this.targetIndex = this.userIndex + 1;
-        if (this.targetIndex >= this.props.players.length) {
+        if (this.targetIndex >= this.players.length) {
           this.targetIndex = 0;
         }
-        var target = this.props.players[this.targetIndex];
+        var target = this.players[this.targetIndex];
 
         this.setState({
           target: target,
@@ -142,17 +145,17 @@ class Game extends React.Component {
     var oldTargetIndex = this.targetIndex;
     // update target
     this.targetIndex++;
-    if (this.targetIndex >= this.props.players.length) {
+    if (this.targetIndex >= this.players.length) {
       this.targetIndex = 0;
     }
-    var target = this.props.players[this.targetIndex];
+    var target = this.players[this.targetIndex];
 
     //update backlog (prev person+1, current person-1)
     var backlog = this.state.backlog;
     backlog[this.userIndex] = backlog[this.userIndex] - 1;
     var prevIndex = this.userIndex - 1;
     if (prevIndex < 0) {
-      prevIndex = this.props.players.length - 1;
+      prevIndex = this.players.length - 1;
     }
     if (oldTargetIndex !== prevIndex) { // dont add to prev person's backlog if they're getting their own back
       backlog[prevIndex] = backlog[prevIndex] + 1;
@@ -177,16 +180,17 @@ class Game extends React.Component {
       () => { console.log("setState completed", this.state); this.onMakeMove2(); });
   }
 
-  newRound() { // reset everything except questionsList and scores
-    this.userIndex = this.props.players.indexOf(this.props.name);
+  newRound() { // reset everything except questionsList, reverse players/scores & update user index
+    this.players = this.players.reverse();
+    this.userIndex = this.players.indexOf(this.props.name);
     this.targetIndex = this.userIndex + 1;
-    if (this.targetIndex >= this.props.players.length) {
+    if (this.targetIndex >= this.players.length) {
       this.targetIndex = 0;
     }
-    var target = this.props.players[this.targetIndex];
+    var target = this.players[this.targetIndex];
 
     // create multidimensional arrays this way for an annoying reason
-    var rows = this.props.occupants; //players
+    var rows = this.props.occupants; //number of players
     var cols = this.props.occupants - 1; //answer blanks
     var answers = [];
     var answerers = [];
@@ -207,6 +211,7 @@ class Game extends React.Component {
 
     this.setState({
       target: target,
+      scores: this.state.scores.reverse(),
       backlog: Array(this.props.occupants).fill(1),
       questions: questions,
       answers: answers, // [player][answer]
@@ -222,7 +227,7 @@ class Game extends React.Component {
   //   const winnerIndex = this.state.scores.findIndex(score => score >= 10);
   //   if (winnerIndex >= 0) {
   //     this.gameOver = true;
-  //     this.newRound(this.props.players[winnerIndex]);
+  //     this.newRound(this.players[winnerIndex]);
   //     // change state in order to rerender ?
   //   }
   // };
@@ -274,7 +279,7 @@ class Game extends React.Component {
   onGuess = (index, guess) => {
     var scores = this.state.scores;
     var answerer = this.state.answerers[this.userIndex][index];
-    var answererIndex = this.props.players.indexOf(answerer);
+    var answererIndex = this.players.indexOf(answerer);
     // increment answerer's score
     scores[answererIndex] = scores[answererIndex] + 1;
 
@@ -286,7 +291,7 @@ class Game extends React.Component {
     // Publish move to the channel
     this.props.pubnub.publish({
       message: {
-        judge: this.props.players[this.userIndex],
+        judge: this.players[this.userIndex],
         scores: scores,
       },
       channel: this.props.gameChannel
@@ -305,8 +310,8 @@ class Game extends React.Component {
           <p>Backlog: {this.state.backlog[this.userIndex]}</p>
         </div>
         {!this.state.judgeMode &&
-          <div className="board">
-            <p style={{ fontSize: "30px", color: "LightCoral" }}>Target: {this.state.target}</p>
+          <div >
+            <p style={{ fontSize: "30px", color: "Red", marginTop: "30px", marginBottom: "10px" }}>Target: {this.state.target}</p>
             {(this.state.backlog[this.userIndex] !== 0 || this.state.roundDone) &&
               <Board
                 roundDone={this.state.roundDone}
@@ -315,7 +320,7 @@ class Game extends React.Component {
                 answers={this.state.answers[this.targetIndex]}
                 onClick={(index, answer) => this.onMakeMove(index, answer)}
                 judgeMode={this.state.judgeMode}
-                players={this.props.players}
+                players={this.players}
               />
             }
             {this.state.backlog[this.userIndex] === 0 && !this.state.roundDone &&
@@ -324,8 +329,8 @@ class Game extends React.Component {
           </div>
         }
         {this.state.judgeMode &&
-          <div className="board">
-            <p style={{ fontSize: "30px", color: "LightCoral" }}>Target: {this.state.target}</p>
+          <div >
+            <p style={{ fontSize: "30px", color: "Red", marginTop: "30px", marginBottom: "10px" }}>Target: {this.state.target}</p>
             <Board
               roundDone={false}
               blanks={this.props.occupants - 1}
@@ -333,7 +338,7 @@ class Game extends React.Component {
               answers={this.state.answers[this.targetIndex]}
               onClick={(index, guess) => this.onGuess(index, guess)}
               judgeMode={this.state.judgeMode}
-              players={this.props.players}
+              players={this.players}
             />
           </div>
         }

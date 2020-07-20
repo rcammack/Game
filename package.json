@@ -1,6 +1,6 @@
 {
   "name": "react-tic-tac-toe",
-  "homepage": "http://rcammack.github.io/game",
+  "homepage": "http://rcammack.github.io/Game",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
