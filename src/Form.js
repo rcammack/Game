@@ -34,15 +34,21 @@ class Form extends React.Component {
           </form>
         }
         {this.props.judgeMode &&
-          <form onSubmit={this.handleSubmit}>
-              <div style={{ marginTop: "10px", marginBottom: "10px" }}>
-                <p style={{ display: "inline" }}>{this.props.question}:</p>&nbsp;
-                <p style={{ display: "inline", color: "Blue" }}>{this.props.answer}</p>
+          <form className="ui form" onSubmit={this.handleSubmit}>
+            <label style={{ marginTop: "10px", marginBottom: "10px" }}>
+              <p style={{ display: "inline", fontWeight: "bold" }}>{this.props.question}:</p>&nbsp;
+                  <p style={{ display: "inline", fontWeight: "bold", color: "CornflowerBlue" }}>{this.props.answer}</p>
+            </label>
+            <div className="inline fields">
+              <div className="field">
+                <select className="ui selection dropdown" value={this.state.value} onChange={this.handleChange}>
+                  {this.props.players.map((player) => <option key={player} value={player}>{player}</option>)}
+                </select>
               </div>
-              <select value={this.state.value} onChange={this.handleChange}>
-                {this.props.players.map((player) => <option key={player} value={player}>{player}</option>)}
-              </select>
-              <input style={{ marginLeft: "12px" }} type="submit" value="Submit" />
+              <div className="field">
+                <input className="ui button" type="submit" value="Submit" />
+              </div>
+            </div>
           </form>
         }
       </div>

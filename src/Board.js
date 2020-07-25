@@ -31,7 +31,7 @@ class Board extends React.Component {
         {((this.props.answers[i] !== "" && !this.props.judgeMode) || (this.props.roundDone && !this.props.judgeMode)) &&
           <div>
             <p style={{ display: "inline" }}>{this.props.questions[i]}:</p>&nbsp;
-          <p style={{ display: "inline", color: "Blue" }}>{this.props.answers[i]}</p>
+          <p style={{ display: "inline", color: "CornflowerBlue" }}>{this.props.answers[i]}</p>
           </div>
         }
       </div>

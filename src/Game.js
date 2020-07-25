@@ -7,8 +7,6 @@ class Game extends React.Component {
   constructor(props) {
     super(props);
 
-    console.log(this.props.gameChannel);
-
     this.userIndex = this.props.players.indexOf(this.props.name);
     this.targetIndex = this.userIndex + 1;
     if (this.targetIndex >= this.props.players.length) {
@@ -38,7 +36,6 @@ class Game extends React.Component {
     if (this.props.isRoomCreator) {
       shuffledQuestionsList = this.shuffleQuestionsList();
       questions = shuffledQuestionsList.slice(0, this.props.occupants - 1);
-      console.log("questions getting published");
       this.props.pubnub.publish({
         message: {
           questionsList: shuffledQuestionsList,
@@ -70,16 +67,15 @@ class Game extends React.Component {
 
   componentDidMount() {
     this.props.pubnub.getMessage(this.props.gameChannel, (msg) => {
-      console.log("message received!");
+      // set questions
       if (msg.message.questions) {
         this.setState({
           questionsList: msg.message.questionsList,
           questions: msg.message.questions,
-        },
-          () => { console.log("questions were updated"); });
+        });
       }
 
-      // Publish move to the opponent's board
+      // update scores / done judging? / new round?
       else if (msg.message.judge) {
         this.setState({
           scores: msg.message.scores,
@@ -92,7 +88,8 @@ class Game extends React.Component {
         }
       }
 
-      else if (!msg.message.reset) {
+      // publish answer
+      else if (!msg.message.reset && msg.message.backlog !== undefined) {
         this.publishMove(msg.message.answers, msg.message.answerers, msg.message.backlog, msg.message.judgeMode);
       }
 
@@ -177,7 +174,7 @@ class Game extends React.Component {
       roundDone: roundDone,
       judgeMode: judgeMode,
     },
-      () => { console.log("setState completed", this.state); this.onMakeMove2(); });
+      () => { this.onMakeMove2(); });
   }
 
   newRound() { // reset everything except questionsList, reverse players/scores & update user index
@@ -305,14 +302,15 @@ class Game extends React.Component {
     return (
       <div>
         <div>
-          <p style={{ display: "inline", fontSize: "36px" }}>{this.props.name}</p>&nbsp;&nbsp;&nbsp;&nbsp;
+          <p style={{ display: "inline", fontSize: "26px" }}>{this.props.name}</p>&nbsp;&nbsp;&nbsp;&nbsp;
           <p style={{ display: "inline" }}>Score: {this.state.scores[this.userIndex]}</p>
+          {this.state.scores[this.userIndex] >= 8 && <i className="yellow trophy icon" style={{ marginLeft: "10px" }}/>}
           <p>Backlog: {this.state.backlog[this.userIndex]}</p>
         </div>
         {!this.state.judgeMode &&
           <div >
-            <p style={{ fontSize: "30px", color: "Red", marginTop: "30px", marginBottom: "10px" }}>Target: {this.state.target}</p>
-            {(this.state.backlog[this.userIndex] !== 0 || this.state.roundDone) &&
+            <p style={{ fontSize: "26px", color: "Tomato", marginTop: "30px", marginBottom: "10px" }}>Target: {this.state.target}</p>
+            {this.state.backlog[this.userIndex] !== 0 &&
               <Board
                 roundDone={this.state.roundDone}
                 blanks={this.props.occupants - 1}
@@ -323,14 +321,14 @@ class Game extends React.Component {
                 players={this.players}
               />
             }
-            {this.state.backlog[this.userIndex] === 0 && !this.state.roundDone &&
+            {this.state.backlog[this.userIndex] === 0 && //includes if you're waiting for your own sheet back
               <p>waiting...</p>
             }
           </div>
         }
         {this.state.judgeMode &&
           <div >
-            <p style={{ fontSize: "30px", color: "Red", marginTop: "30px", marginBottom: "10px" }}>Target: {this.state.target}</p>
+            <p style={{ fontSize: "20px", color: "Tomato", marginTop: "30px", marginBottom: "10px" }}>Guess who wrote your fav answer</p>
             <Board
               roundDone={false}
               blanks={this.props.occupants - 1}
