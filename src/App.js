@@ -41,7 +41,7 @@ class App extends Component {
         if (msg.message.name != null && this.state.isRoomCreator) {
           this.occupants++;
           var startIsDisabled = true;
-          if (this.occupants > 1) {
+          if (this.occupants > 2) {
             startIsDisabled = false;
           }
           this.setState((state) => {
@@ -53,7 +53,7 @@ class App extends Component {
             };
           })
         }
-        if (msg.message.start && msg.message.occupants >= 2) {
+        if (msg.message.start && msg.message.occupants >= 3) {
           this.occupants = msg.message.occupants;
           this.pubnub.subscribe({
             channels: [msg.message.gameChannel],

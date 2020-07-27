@@ -95,9 +95,37 @@ class Game extends React.Component {
         }
       }
 
-      // publish answer
-      else if (!msg.message.reset && msg.message.backlog !== undefined) {
-        this.publishMove(msg.message.answers, msg.message.answerers, msg.message.backlog, msg.message.judgeMode);
+      // someone 'made move' aka answered a question
+      else if (!msg.message.reset && msg.message.name) {
+        this.setState((state) => {
+          var backlog = state.backlog;
+          var answers = state.answers;
+          var answerers = state.answerers;
+          answers[msg.message.oldTargetIndex][msg.message.index] = (msg.message.answer === "") ? "no answer" : msg.message.answer;
+          answerers[msg.message.oldTargetIndex][msg.message.index] = msg.message.name;
+
+          //update backlog (prev person+1, current person-1)
+          backlog[msg.message.userIndex] = backlog[msg.message.userIndex] - 1;
+          var prevIndex = msg.message.userIndex - 1;
+          if (prevIndex < 0) {
+            prevIndex = this.players.length - 1;
+          }
+          if (msg.message.oldTargetIndex !== prevIndex) { // dont add to prev person's backlog if they're getting their own back
+            backlog[prevIndex] = backlog[prevIndex] + 1;
+          }
+
+          var judgeMode = false;
+          if (backlog.every(item => item === 0)) {
+            judgeMode = true;
+          }
+
+          return {
+            answers: answers,
+            answerers: answerers,
+            backlog: backlog,
+            judgeMode: state.judgeMode || judgeMode
+          };
+        });
       }
 
       // Start a new game
@@ -145,44 +173,71 @@ class Game extends React.Component {
     return shuffledQuestionsList;
   }
 
-  nextTarget() { // !!! only use if you want to continue onMakeMove2 !!!
-    var oldTargetIndex = this.targetIndex;
-    // update target
-    this.targetIndex++;
-    if (this.targetIndex >= this.players.length) {
-      this.targetIndex = 0;
-    }
-    var target = this.players[this.targetIndex];
+  onMakeMove = (index, answer) => {
+    // Check if user has backlog & field is empty
+    if (this.state.backlog[this.userIndex] > 0 && !this.state.answers[this.targetIndex][index]) {
+      //next target
+      var oldTargetIndex = this.targetIndex;
+      // update target
+      this.targetIndex++;
+      if (this.targetIndex >= this.players.length) {
+        this.targetIndex = 0;
+      }
+      var target = this.players[this.targetIndex];
+      var roundDone = false;
+      if (this.targetIndex === this.userIndex) {
+        roundDone = true;
+      }
+      this.setState({
+        target: target,
+        roundDone: roundDone,
+      });
 
-    //update backlog (prev person+1, current person-1)
-    var backlog = this.state.backlog;
-    backlog[this.userIndex] = backlog[this.userIndex] - 1;
-    var prevIndex = this.userIndex - 1;
-    if (prevIndex < 0) {
-      prevIndex = this.players.length - 1;
+      this.props.pubnub.publish({
+        message: {
+          oldTargetIndex: oldTargetIndex,
+          index: index,
+          answer: answer,
+          name: this.props.name,
+          userIndex: this.userIndex,
+        },
+        channel: this.props.gameChannel
+      });
     }
-    if (oldTargetIndex !== prevIndex) { // dont add to prev person's backlog if they're getting their own back
-      backlog[prevIndex] = backlog[prevIndex] + 1;
-    }
-
-    var roundDone = false;
-    if (this.targetIndex === this.userIndex) {
-      roundDone = true;
-    }
-
-    var judgeMode = false;
-    if (backlog.every(item => item === 0)) {
-      judgeMode = true;
-    }
-
-    this.setState({
-      target: target,
-      backlog: backlog,
-      roundDone: roundDone,
-      judgeMode: judgeMode,
-    },
-      () => { this.onMakeMove2(); });
   }
+
+  onGuess = (index, guess) => {
+    var answerer = this.state.answerers[this.userIndex][index];
+    var answererIndex = this.players.indexOf(answerer);
+
+    var correctGuess = false;
+    if (answerer === guess) {
+      correctGuess = true;
+    }
+
+    // Publish move to the channel
+    this.props.pubnub.publish({
+      message: {
+        judge: this.players[this.userIndex],
+        user: this.userIndex,
+        answererIndex: answererIndex,
+        correctGuess: correctGuess
+      },
+      channel: this.props.gameChannel
+    });
+
+    // Check if there is a winner
+    // this.checkForWinner()
+  }
+
+  // checkForWinner() {
+  //   const winnerIndex = this.state.scores.findIndex(score => score >= 10);
+  //   if (winnerIndex >= 0) {
+  //     this.gameOver = true;
+  //     this.newRound(this.players[winnerIndex]);
+  //     // change state in order to rerender ?
+  //   }
+  // };
 
   newRound() { // reset everything except questionsList, reverse players/scores & update user index
     this.players = this.players.reverse();
@@ -215,96 +270,20 @@ class Game extends React.Component {
 
     this.setState((state) => { //set state this way because of scores relying on state.scores
       return {
-      target: target,
-      scores: state.scores.reverse(),
-      backlog: Array(this.props.occupants).fill(1),
-      questions: questions,
-      answers: answers, // [player][answer]
-      answerers: answerers,
-      roundDone: false,
-      judgeMode: false,
-    };
-  });
+        target: target,
+        scores: state.scores.reverse(),
+        backlog: Array(this.props.occupants).fill(1),
+        questions: questions,
+        answers: answers, // [player][answer]
+        answerers: answerers,
+        roundDone: false,
+        judgeMode: false,
+      };
+    });
 
     this.judgeCount = 0;
   }
 
-  // checkForWinner() {
-  //   const winnerIndex = this.state.scores.findIndex(score => score >= 10);
-  //   if (winnerIndex >= 0) {
-  //     this.gameOver = true;
-  //     this.newRound(this.players[winnerIndex]);
-  //     // change state in order to rerender ?
-  //   }
-  // };
-
-  // Opponent's move is published to the board
-  publishMove = (updatedAnswers, updatedAnswerers, backlog, judgeMode) => {
-    this.setState({
-      answers: updatedAnswers,
-      answerers: updatedAnswerers,
-      backlog: backlog,
-      judgeMode: this.state.judgeMode || judgeMode,
-    });
-
-    // this.checkForWinner()
-  }
-
-  onMakeMove = (index, answer) => {
-    var answers = this.state.answers;
-    var answerers = this.state.answerers;
-    var backlog = this.state.backlog;
-    var targetIndex = this.targetIndex;
-
-    // Check if user has backlog field is empty
-    if (backlog[this.userIndex] > 0 && !answers[targetIndex][index]) {
-      answers[targetIndex][index] = (answer === "") ? "no answer" : answer;
-      answerers[targetIndex][index] = this.props.name;
-      this.setState({
-        answers: answers,
-        answerers: answerers
-      });
-      this.nextTarget();
-      // continued in onMakeMove2()
-    }
-  }
-
-  onMakeMove2() { //continuation of onMakeMove after setState finishes in nextTarget()
-    // Publish move to the channel
-    this.props.pubnub.publish({
-      message: {
-        answers: this.state.answers,
-        answerers: this.state.answerers,
-        backlog: this.state.backlog,
-        judgeMode: this.state.judgeMode,
-      },
-      channel: this.props.gameChannel
-    });
-  }
-
-  onGuess = (index, guess) => {
-    var answerer = this.state.answerers[this.userIndex][index];
-    var answererIndex = this.players.indexOf(answerer);
-
-    var correctGuess = false;
-    if (answerer === guess) {
-      correctGuess = true;
-    }
-
-    // Publish move to the channel
-    this.props.pubnub.publish({
-      message: {
-        judge: this.players[this.userIndex],
-        user: this.userIndex,
-        answererIndex: answererIndex,
-        correctGuess: correctGuess
-      },
-      channel: this.props.gameChannel
-    });
-
-    // Check if there is a winner
-    // this.checkForWinner()
-  }
 
   render() {
     return (
