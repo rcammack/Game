@@ -77,9 +77,16 @@ class Game extends React.Component {
 
       // update scores / done judging? / new round?
       else if (msg.message.judge) {
-        this.setState({
-          scores: msg.message.scores,
-          judgeMode: msg.message.judge === this.players[this.userIndex] ? false : this.state.judgeMode,
+        this.setState((state) => {
+          var scores = state.scores;
+          scores[msg.message.answererIndex] = scores[msg.message.answererIndex] + 1;
+          if (msg.message.correctGuess) {
+            scores[msg.message.user] = scores[msg.message.user] + 1;
+          }
+          return {
+            scores: scores,
+            judgeMode: msg.message.judge === this.players[this.userIndex] ? false : state.judgeMode
+          };
         });
 
         this.judgeCount++;
@@ -274,22 +281,21 @@ class Game extends React.Component {
   }
 
   onGuess = (index, guess) => {
-    var scores = this.state.scores;
     var answerer = this.state.answerers[this.userIndex][index];
     var answererIndex = this.players.indexOf(answerer);
-    // increment answerer's score
-    scores[answererIndex] = scores[answererIndex] + 1;
 
-    // increment user's score if guess matches answerer
+    var correctGuess = false;
     if (answerer === guess) {
-      scores[this.userIndex] = scores[this.userIndex] + 1;
+      correctGuess = true;
     }
 
     // Publish move to the channel
     this.props.pubnub.publish({
       message: {
         judge: this.players[this.userIndex],
-        scores: scores,
+        user: this.userIndex,
+        answererIndex: answererIndex,
+        correctGuess: correctGuess
       },
       channel: this.props.gameChannel
     });
@@ -304,7 +310,7 @@ class Game extends React.Component {
         <div>
           <p style={{ display: "inline", fontSize: "26px" }}>{this.props.name}</p>&nbsp;&nbsp;&nbsp;&nbsp;
           <p style={{ display: "inline" }}>Score: {this.state.scores[this.userIndex]}</p>
-          {this.state.scores[this.userIndex] >= 8 && <i className="yellow trophy icon" style={{ marginLeft: "10px" }}/>}
+          {this.state.scores[this.userIndex] >= 8 && <i className="yellow trophy icon" style={{ marginLeft: "10px" }} />}
           <p>Backlog: {this.state.backlog[this.userIndex]}</p>
         </div>
         {!this.state.judgeMode &&
