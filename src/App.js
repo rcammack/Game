@@ -39,16 +39,18 @@ class App extends Component {
     if (this.lobbyChannel != null) {
       this.pubnub.getMessage(this.lobbyChannel, (msg) => {
         if (msg.message.name != null && this.state.isRoomCreator) {
-          var players = this.state.players;
-          players.push(msg.message.name);
           this.occupants++;
           var startIsDisabled = true;
           if (this.occupants > 1) {
             startIsDisabled = false;
           }
-          this.setState({
-            startIsDisabled: startIsDisabled,
-            players: players
+          this.setState((state) => {
+            var players = state.players;
+            players.push(msg.message.name);
+            return {
+              startIsDisabled: startIsDisabled,
+              players: players
+            };
           })
         }
         if (msg.message.start && msg.message.occupants >= 2) {
@@ -115,7 +117,7 @@ class App extends Component {
     }).then((result) => {
       // Check if the user typed a value in the input field
       if (result.value) {
-        var players = this.state.players;
+        var players = [];
         players.push(result.value);
         this.setState({
           name: result.value,

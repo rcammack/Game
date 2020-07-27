@@ -213,16 +213,18 @@ class Game extends React.Component {
     var i = this.state.questionsList.indexOf(this.state.questions[this.state.questions.length - 1]);
     var questions = this.state.questionsList.slice(i + 1, i + this.props.occupants);
 
-    this.setState({
+    this.setState((state) => { //set state this way because of scores relying on state.scores
+      return {
       target: target,
-      scores: this.state.scores.reverse(),
+      scores: state.scores.reverse(),
       backlog: Array(this.props.occupants).fill(1),
       questions: questions,
       answers: answers, // [player][answer]
       answerers: answerers,
       roundDone: false,
       judgeMode: false,
-    });
+    };
+  });
 
     this.judgeCount = 0;
   }
