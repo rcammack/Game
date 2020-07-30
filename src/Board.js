@@ -26,7 +26,9 @@ class Board extends React.Component {
             players={this.props.players}
             question={this.props.questions[i]}
             answer={this.props.answers[i]}
-            onClick={(value) => this.props.onClick(i, value)} />
+            onClick={(value) => this.props.onClick(i, value)}
+            onQuestionRefresh={() => this.props.onQuestionRefresh(i)}
+            refresh={this.props.refresh} />
         }
         {((this.props.answers[i] !== "" && !this.props.judgeMode) || (this.props.roundDone && !this.props.judgeMode)) &&
           <div>

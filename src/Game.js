@@ -63,6 +63,7 @@ class Game extends React.Component {
     this.judgeCount = 0;
     this.gameOver = false;
     this.players = this.props.players;
+    this.madeMove = false;
   }
 
   componentDidMount() {
@@ -72,6 +73,24 @@ class Game extends React.Component {
         this.setState({
           questionsList: msg.message.questionsList,
           questions: msg.message.questions,
+        });
+      }
+
+      //refresh questions
+      if (msg.message.newIndex) {
+        this.setState((state) => {
+          var questionsList = state.questionsList;
+          var questions = state.questions;
+          //replace old index and delete the new question
+          questionsList[msg.message.oldIndex] = questionsList[msg.message.newIndex];
+          //remove the original new question so it's not used twice
+          questionsList.splice(msg.message.newIndex, 1);
+          //replace question in currently used questions
+          questions[msg.message.i] = questionsList[msg.message.oldIndex];
+          return {
+            questionsList: questionsList,
+            questions: questions
+          };
         });
       }
 
@@ -97,6 +116,7 @@ class Game extends React.Component {
 
       // someone 'made move' aka answered a question
       else if (!msg.message.reset && msg.message.name) {
+        this.madeMove = true;
         this.setState((state) => {
           var backlog = state.backlog;
           var answers = state.answers;
@@ -240,6 +260,8 @@ class Game extends React.Component {
   // };
 
   newRound() { // reset everything except questionsList, reverse players/scores & update user index
+    this.judgeCount = 0;
+    this.madeMove = false;
     this.players = this.players.reverse();
     this.userIndex = this.players.indexOf(this.props.name);
     this.targetIndex = this.userIndex + 1;
@@ -280,8 +302,24 @@ class Game extends React.Component {
         judgeMode: false,
       };
     });
+  }
 
-    this.judgeCount = 0;
+  onQuestionRefresh = (i) => {
+    // index of the question in the questionsList
+    var QLIndex = this.state.questionsList.indexOf(this.state.questions[i]);
+    // index of last [question] in questionsList
+    var endIndex = this.state.questionsList.indexOf(this.state.questions[this.state.questions.length - 1]);
+    // if the next unused index in questionsList exists (aka if we didn't go through the entire questionsList)
+    if (endIndex + 1 < this.state.questionsList.length) {
+      this.props.pubnub.publish({
+        message: {
+          i: i,
+          oldIndex: QLIndex,
+          newIndex: endIndex + 1,
+        },
+        channel: this.props.gameChannel
+      });
+    }
   }
 
 
@@ -291,12 +329,12 @@ class Game extends React.Component {
         <div>
           <p style={{ display: "inline", fontSize: "26px" }}>{this.props.name}</p>&nbsp;&nbsp;&nbsp;&nbsp;
           <p style={{ display: "inline" }}>Score: {this.state.scores[this.userIndex]}</p>
-          {this.state.scores[this.userIndex] >= 8 && <i className="yellow trophy icon" style={{ marginLeft: "10px" }} />}
-          <p>Backlog: {this.state.backlog[this.userIndex]}</p>
+          {this.state.scores[this.userIndex] >= 8 && <i className="yellow trophy icon" style={{ marginLeft: "10px" }} />}&nbsp;&nbsp;&nbsp;&nbsp;
+          <p style={{ display: "inline" }}>Backlog: {this.state.backlog[this.userIndex]}</p>
         </div>
         {!this.state.judgeMode &&
           <div >
-            <p style={{ fontSize: "26px", color: "Tomato", marginTop: "30px", marginBottom: "10px" }}>Target: {this.state.target}</p>
+            <p style={{ fontSize: "26px", color: "Tomato", marginTop: "15px", marginBottom: "10px" }}>Target: {this.state.target}</p>
             {this.state.backlog[this.userIndex] !== 0 &&
               <Board
                 roundDone={this.state.roundDone}
@@ -306,6 +344,8 @@ class Game extends React.Component {
                 onClick={(index, answer) => this.onMakeMove(index, answer)}
                 judgeMode={this.state.judgeMode}
                 players={this.players}
+                onQuestionRefresh={(i) => this.onQuestionRefresh(i)}
+                refresh={this.props.isRoomCreator && !this.madeMove}
               />
             }
             {this.state.backlog[this.userIndex] === 0 && //includes if you're waiting for your own sheet back
@@ -324,6 +364,7 @@ class Game extends React.Component {
               onClick={(index, guess) => this.onGuess(index, guess)}
               judgeMode={this.state.judgeMode}
               players={this.players}
+              refresh={false}
             />
           </div>
         }

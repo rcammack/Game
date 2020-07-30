@@ -28,7 +28,7 @@ class App extends Component {
     this.roomId = null;
     this.pubnub.init(this);
 
-     this.pubnub.addListener({
+    this.pubnub.addListener({
       message: function (msg) {
         console.log("listener: message in ", msg.channel, msg.message);
       }
@@ -39,31 +39,38 @@ class App extends Component {
     if (this.lobbyChannel != null) {
       this.pubnub.getMessage(this.lobbyChannel, (msg) => {
         if (msg.message.name != null && this.state.isRoomCreator) {
-          this.occupants++;
-          var startIsDisabled = true;
-          if (this.occupants > 2) {
-            startIsDisabled = false;
+          if (!this.state.players.includes(msg.message.name)) {
+            this.occupants++;
+            var startIsDisabled = true;
+            if (this.occupants > 2) {
+              startIsDisabled = false;
+            }
+            this.setState((state) => {
+              var players = state.players;
+              players.push(msg.message.name);
+              return {
+                startIsDisabled: startIsDisabled,
+                players: players
+              };
+            })
           }
-          this.setState((state) => {
-            var players = state.players;
-            players.push(msg.message.name);
-            return {
-              startIsDisabled: startIsDisabled,
-              players: players
-            };
-          })
         }
         if (msg.message.start && msg.message.occupants >= 3) {
-          this.occupants = msg.message.occupants;
-          this.pubnub.subscribe({
-            channels: [msg.message.gameChannel],
-            withPresence: true,
-          });
-          this.setState({
-            // isPlaying: msg.message.start,
-            players: msg.message.players,
-            gameChannel: msg.message.gameChannel,
-          })
+          if (msg.message.players.includes(this.state.name)) {
+            this.occupants = msg.message.occupants;
+            this.pubnub.subscribe({
+              channels: [msg.message.gameChannel],
+              withPresence: true,
+            });
+            this.setState({
+              players: msg.message.players,
+              gameChannel: msg.message.gameChannel,
+            })
+          } else {
+            this.pubnub.unsubscribe({
+              channels: [this.lobbyChannel]
+            });
+          }
         }
       });
     }
@@ -91,7 +98,7 @@ class App extends Component {
     // Create a random name for the channel
     this.roomId = shortid.generate().substring(0, 5);
     this.lobbyChannel = 'tictactoelobby--' + this.roomId;
-    this.occupants++;
+    this.occupants = 1;
     this.pubnub.subscribe({
       channels: [this.lobbyChannel],
       withPresence: true
@@ -122,14 +129,15 @@ class App extends Component {
         this.setState({
           name: result.value,
           players: players,
+          isRoomCreator: true,
+          createIsDisabled: true, // Disable the 'Create' button
         })
+      } else {
+        this.pubnub.unsubscribe({
+          channels: [this.lobbyChannel]
+        });
       }
     })
-
-    this.setState({
-      isRoomCreator: true,
-      createIsDisabled: true, // Disable the 'Create' button
-    });
   }
 
   // The 'Join' button was pressed
@@ -197,6 +205,10 @@ class App extends Component {
           },
           channel: this.lobbyChannel
         });
+      } else {
+        this.pubnub.unsubscribe({
+          channels: [this.lobbyChannel]
+        });
       }
     })
   }
@@ -220,6 +232,22 @@ class App extends Component {
       // Close the modals if they are opened
       Swal.close();
     }
+  }
+
+  onPressRemove = (player) => {
+    this.occupants--;
+    var startIsDisabled = false;
+    if (this.occupants < 3) {
+      startIsDisabled = true;
+    }
+    this.setState((state) => {
+      var players = state.players;
+      players.splice(state.players.indexOf(player), 1);
+      return {
+        startIsDisabled: startIsDisabled,
+        players: players
+      };
+    })
   }
 
   // Reset everything
@@ -250,10 +278,10 @@ class App extends Component {
         {!this.state.isPlaying &&
           <div className="lobby">
             <h1 style={{ margin: "auto", marginBottom: "30px" }}>
-              <div style={{ display: "inline" }} className="content">Truth Bomb </div>
+              <div style={{ display: "inline" }}>Truth Bomb </div>
               <i style={{ display: "inline" }} className="bomb icon"></i>
             </h1>
-            <p style={{ margin: "auto", marginBottom: "15px" }}>Share this room ID with your friends: {this.roomId}</p>
+            {this.roomId && <p style={{ margin: "auto", marginBottom: "15px" }}>Share this room ID with your friends: {this.roomId}</p>}
             <div style={{ margin: "auto" }}>
               { // no room id yet -> create or join
                 !this.roomId &&
@@ -277,7 +305,7 @@ class App extends Component {
 
               { // created game and waiting for people to join
                 this.roomId && this.state.isRoomCreator &&
-                <div style={{ margin: "auto" }}>
+                <div style={{ margin: "auto", textAlign: "center" }}>
                   <button
                     className="ui button"
                     style={{ marginBottom: "15px" }}
@@ -285,7 +313,12 @@ class App extends Component {
                     onClick={(e) => this.onPressStart()}
                   > Start
                   </button>
-                  {this.state.players.map((player, i) => <p style={{ textAlign: "center" }} key={i}>{player}</p>)}
+                  {this.state.players.map((player, i) =>
+                    <div style={{ textAlign: "left" }} key={i}>
+                      {player !== this.state.name && <i style={{ display: "inline" }} className="red close icon" onClick={(e) => this.onPressRemove(player)}></i>}
+                      <p style={{ display: "inline" }}>{player}</p>
+                    </div>
+                  )}
                 </div>
               }
 

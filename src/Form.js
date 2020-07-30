@@ -25,7 +25,10 @@ class Form extends React.Component {
         {!this.props.judgeMode &&
           <form className="ui form" onSubmit={this.handleSubmit}>
             <div className="field">
-              <label>{this.props.question}:</label>
+              <label>
+                {this.props.refresh && <i style={{ display: "inline" }} className="blue redo icon" onClick={() => this.props.onQuestionRefresh()}></i>}&nbsp;
+                {this.props.question}:
+              </label>
               <div className="ui action input" style={{ maxWidth: "500px" }}>
                 <input className="ui input" type="text" placeholder="answer" value={this.state.value} onChange={this.handleChange} />
                 <button className="ui button" value="Submit">Submit</button>
