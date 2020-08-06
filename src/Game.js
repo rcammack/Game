@@ -61,7 +61,6 @@ class Game extends React.Component {
     };
 
     this.judgeCount = 0;
-    this.gameOver = false;
     this.players = this.props.players;
     this.madeMove = false;
   }
@@ -96,11 +95,25 @@ class Game extends React.Component {
 
       // update scores / done judging? / new round?
       else if (msg.message.judge) {
+        this.judgeCount++;
+        var winners = [];
+
         this.setState((state) => {
           var scores = state.scores;
           scores[msg.message.answererIndex] = scores[msg.message.answererIndex] + 1;
           if (msg.message.correctGuess) {
             scores[msg.message.user] = scores[msg.message.user] + 1;
+          }
+          //check for winner if round is done (with updated scores)
+          if (this.judgeCount === this.props.occupants) {
+            var maxScore = Math.max(...scores);
+            if (maxScore >= this.props.winningScore) {
+              for (let i = 0; i < scores.length; i++) {
+                if (scores[i] === maxScore) {
+                  winners.push(this.players[i]);
+                }
+              }
+            }
           }
           return {
             scores: scores,
@@ -108,9 +121,12 @@ class Game extends React.Component {
           };
         });
 
-        this.judgeCount++;
-        if (this.judgeCount === this.props.occupants) {
-          this.newRound();
+        //if there is a winner
+        if (winners.length !== 0) {
+          this.onWin(winners);
+        }
+        else if (this.judgeCount === this.props.occupants) {
+          this.newRound(false);
         }
       }
 
@@ -139,6 +155,8 @@ class Game extends React.Component {
             judgeMode = true;
           }
 
+          console.log(answers);
+
           return {
             answers: answers,
             answerers: answerers,
@@ -150,28 +168,8 @@ class Game extends React.Component {
 
       // Start a new game
       else if (msg.message.reset) {
-        this.userIndex = this.players.indexOf(this.props.name);
-        this.targetIndex = this.userIndex + 1;
-        if (this.targetIndex >= this.players.length) {
-          this.targetIndex = 0;
-        }
-        var target = this.players[this.targetIndex];
-
-        this.setState({
-          target: target,
-
-          scores: Array(this.props.occupants).fill(0),
-          backlog: Array(this.props.occupants).fill(1),
-
-          questions: Array(this.props.occupants - 1).fill("q"),
-          answers: Array(this.props.occupants).fill(Array(this.props.occupants - 1).fill("")), // [player][answer]
-          answerers: Array(this.props.occupants).fill(Array(this.props.occupants - 1).fill("")),
-
-          roundDone: false,
-          judgeMode: false,
-        });
-
-        this.gameOver = false;
+        Swal.close();
+        this.newRound(true);
       }
 
       // End the game and go back to the lobby
@@ -230,36 +228,19 @@ class Game extends React.Component {
     var answerer = this.state.answerers[this.userIndex][index];
     var answererIndex = this.players.indexOf(answerer);
 
-    var correctGuess = false;
-    if (answerer === guess) {
-      correctGuess = true;
-    }
-
     // Publish move to the channel
     this.props.pubnub.publish({
       message: {
         judge: this.players[this.userIndex],
         user: this.userIndex,
         answererIndex: answererIndex,
-        correctGuess: correctGuess
+        correctGuess: (answerer === guess)
       },
       channel: this.props.gameChannel
     });
-
-    // Check if there is a winner
-    // this.checkForWinner()
   }
 
-  // checkForWinner() {
-  //   const winnerIndex = this.state.scores.findIndex(score => score >= 10);
-  //   if (winnerIndex >= 0) {
-  //     this.gameOver = true;
-  //     this.newRound(this.players[winnerIndex]);
-  //     // change state in order to rerender ?
-  //   }
-  // };
-
-  newRound() { // reset everything except questionsList, reverse players/scores & update user index
+  newRound(restart) { // reset everything except questionsList, reverse players/scores & update user index
     this.judgeCount = 0;
     this.madeMove = false;
     this.players = this.players.reverse();
@@ -287,13 +268,26 @@ class Game extends React.Component {
       answerers.push(answererBlanks);
     }
 
+    // index of the last current question in the questionsList
     var i = this.state.questionsList.indexOf(this.state.questions[this.state.questions.length - 1]);
-    var questions = this.state.questionsList.slice(i + 1, i + this.props.occupants);
 
-    this.setState((state) => { //set state this way because of scores relying on state.scores
+    var questions = [];
+    // if there's enough items in questionList to make a set of questions
+    if (i + this.props.occupants < this.state.questionsList.length) {
+      questions = this.state.questionsList.slice(i + 1, i + this.props.occupants);
+    }
+    // else use the rest of the questions and go back to start of questionsList
+    else {
+      questions = this.state.questionsList.slice(i + 1,);
+      for (let i = 0; questions.length < this.props.occupants - 1; i++) {
+        questions.push(this.state.questionsList[i]);
+      }
+    }
+
+    this.setState((state) => {
       return {
         target: target,
-        scores: state.scores.reverse(),
+        scores: restart ? Array(this.props.occupants).fill(0) : state.scores.reverse(),
         backlog: Array(this.props.occupants).fill(1),
         questions: questions,
         answers: answers, // [player][answer]
@@ -304,7 +298,7 @@ class Game extends React.Component {
     });
   }
 
-  onQuestionRefresh = (i) => {
+  onQuestionRefresh = (i) => { // for when room creator wants to switch out a question
     // index of the question in the questionsList
     var QLIndex = this.state.questionsList.indexOf(this.state.questions[i]);
     // index of last [question] in questionsList
@@ -322,6 +316,69 @@ class Game extends React.Component {
     }
   }
 
+  onWin = (winners) => {
+    let title = (winners.length > 1) ? `Tie! Winners are ${winners.toString()}` : `${winners[0]} wins!`;
+    // pop up for room creator
+    if (this.props.isRoomCreator) {
+      Swal.fire({
+        position: 'top',
+        allowOutsideClick: false,
+        title: title,
+        text: 'New Round?',
+        showCancelButton: true,
+        confirmButtonColor: 'rgb(208,33,41)',
+        cancelButtonColor: '#aaa',
+        cancelButtonText: 'Nope',
+        confirmButtonText: 'Yea!',
+        width: 275,
+        customClass: {
+          heightAuto: false,
+          title: 'title-class',
+          popup: 'popup-class',
+          confirmButton: 'button-class',
+          cancelButton: 'button-class'
+        },
+      }).then((result) => {
+        // Start a new round
+        if (result.value) {
+          this.props.pubnub.publish({
+            message: {
+              reset: true
+            },
+            channel: this.props.gameChannel
+          });
+        }
+        else {
+          // End the game
+          this.props.pubnub.publish({
+            message: {
+              endGame: true
+            },
+            channel: this.props.gameChannel
+          });
+        }
+      })
+    }
+
+    //else if not room creator
+    else {
+      Swal.fire({
+        position: 'top',
+        allowOutsideClick: false,
+        title: title,
+        text: 'Waiting for a new round...',
+        confirmButtonColor: 'rgb(208,33,41)',
+        width: 275,
+        customClass: {
+          heightAuto: false,
+          title: 'title-class',
+          popup: 'popup-class',
+          confirmButton: 'button-class',
+        },
+      });
+    }
+  }
+
 
   render() {
     return (
@@ -329,12 +386,12 @@ class Game extends React.Component {
         <div>
           <p style={{ display: "inline", fontSize: "26px" }}>{this.props.name}</p>&nbsp;&nbsp;&nbsp;&nbsp;
           <p style={{ display: "inline" }}>Score: {this.state.scores[this.userIndex]}</p>
-          {this.state.scores[this.userIndex] >= 8 && <i className="yellow trophy icon" style={{ marginLeft: "10px" }} />}&nbsp;&nbsp;&nbsp;&nbsp;
+          {this.state.scores[this.userIndex] >= this.props.winningScore && <i className="yellow trophy icon" style={{ marginLeft: "10px" }} />}&nbsp;&nbsp;&nbsp;&nbsp;
           <p style={{ display: "inline" }}>Backlog: {this.state.backlog[this.userIndex]}</p>
         </div>
         {!this.state.judgeMode &&
           <div >
-            <p style={{ fontSize: "26px", color: "Tomato", marginTop: "15px", marginBottom: "10px" }}>Target: {this.state.target}</p>
+            <p style={{ fontSize: "20px", color: "Tomato", marginTop: "15px", marginBottom: "10px" }}>Target: {this.state.target}</p>
             {this.state.backlog[this.userIndex] !== 0 &&
               <Board
                 roundDone={this.state.roundDone}

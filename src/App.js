@@ -21,6 +21,7 @@ class App extends Component {
       createIsDisabled: false,
       startIsDisabled: true,
       gameChannel: null,
+      winningScore: 8,
     };
 
     this.occupants = 0;
@@ -65,6 +66,7 @@ class App extends Component {
             this.setState({
               players: msg.message.players,
               gameChannel: msg.message.gameChannel,
+              winningScore: msg.message.winningScore,
             })
           } else {
             this.pubnub.unsubscribe({
@@ -224,7 +226,8 @@ class App extends Component {
           start: true,
           occupants: this.occupants,
           players: this.state.players,
-          gameChannel: gameChannel
+          gameChannel: gameChannel,
+          winningScore: this.state.winningScore,
         },
         channel: this.lobbyChannel
       });
@@ -264,12 +267,17 @@ class App extends Component {
       createIsDisabled: false,
       startIsDisabled: true,
       gameChannel: null,
+      winningScore: 8,
     });
 
     this.occupants = 0;
     this.lobbyChannel = null;
     this.roomId = null;
-    this.pubnub.init(this);
+  }
+
+  //for winning score change
+  handleChange = (event) => {
+    this.setState({ winningScore: event.target.value });
   }
 
   render() {
@@ -306,6 +314,9 @@ class App extends Component {
               { // created game and waiting for people to join
                 this.roomId && this.state.isRoomCreator &&
                 <div style={{ margin: "auto", textAlign: "center" }}>
+                  <select className="ui selection dropdown" value={this.state.winningScore} onChange={this.handleChange}>
+                    {[2,5,8,10,15,20].map((value) => <option key={value} value={value}>{value}</option>)}
+                  </select>
                   <button
                     className="ui button"
                     style={{ marginBottom: "15px" }}
@@ -342,6 +353,7 @@ class App extends Component {
             occupants={this.occupants}
             isRoomCreator={this.state.isRoomCreator}
             endGame={this.endGame}
+            winningScore={this.state.winningScore}
           />
         }
       </div>

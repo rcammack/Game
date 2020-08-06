@@ -3,14 +3,12 @@ import Form from './Form';
 
 class Board extends React.Component {
 
-  // Create the 3 x 3 board
   createBoard(row) {
     const board = [];
-    let cellCounter = 0;
 
-    for (let i = 0; i < row; i += 1) {
+    for (let i = 0; i < row; i++) {
       const columns = [];
-      columns.push(this.renderSquare(cellCounter++));
+      columns.push(this.renderSquare(i));
       board.push(<div key={i}>{columns}</div>);
     }
 
