@@ -29,11 +29,11 @@ class App extends Component {
     this.roomId = null;
     this.pubnub.init(this);
 
-    this.pubnub.addListener({
-      message: function (msg) {
-        console.log("listener: message in ", msg.channel, msg.message);
-      }
-    })
+    // this.pubnub.addListener({
+    //   message: function (msg) {
+    //     console.log("listener: message in ", msg.channel, msg.message);
+    //   }
+    // })
   }
 
   componentDidUpdate() {
@@ -78,12 +78,11 @@ class App extends Component {
     }
 
     if (this.state.gameChannel != null) {
-      this.pubnub.getStatus((statusEvent) => {
-        if (statusEvent.category === "PNConnectedCategory") {
-          console.log("connected to game channel");
+      this.pubnub.getPresence(this.state.gameChannel, presence => {
+        if (presence.action === "join") {
           this.setState({
             isPlaying: true,
-          })
+          });
         }
       });
     }
@@ -259,6 +258,10 @@ class App extends Component {
       channels: [this.lobbyChannel, this.state.gameChannel]
     });
 
+    this.occupants = 0;
+    this.lobbyChannel = null;
+    this.roomId = null;
+
     this.setState({
       name: "",
       players: [],
@@ -269,10 +272,6 @@ class App extends Component {
       gameChannel: null,
       winningScore: 8,
     });
-
-    this.occupants = 0;
-    this.lobbyChannel = null;
-    this.roomId = null;
   }
 
   //for winning score change
@@ -314,9 +313,11 @@ class App extends Component {
               { // created game and waiting for people to join
                 this.roomId && this.state.isRoomCreator &&
                 <div style={{ margin: "auto", textAlign: "center" }}>
-                  <select className="ui selection dropdown" value={this.state.winningScore} onChange={this.handleChange}>
+                  <label>Points to win: </label>
+                  <select style={{ marginBottom: "15px" }} value={this.state.winningScore} onChange={this.handleChange}>
                     {[2,5,8,10,15,20].map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
+                  <br />
                   <button
                     className="ui button"
                     style={{ marginBottom: "15px" }}
