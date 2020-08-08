@@ -387,12 +387,12 @@ class Game extends React.Component {
         <div>
           <p style={{ display: "inline", fontSize: "26px" }}>{this.props.name}</p>&nbsp;&nbsp;&nbsp;&nbsp;
           <p style={{ display: "inline" }}>Score: {this.state.scores[this.userIndex]}</p>
-          {this.state.scores[this.userIndex] >= this.props.winningScore && <i className="yellow trophy icon" style={{ marginLeft: "10px" }} />}&nbsp;&nbsp;&nbsp;&nbsp;
+          {this.state.scores[this.userIndex] >= this.props.winningScore && <i className="trophy icon" style={{ marginLeft: "10px", color: "#FECC30" }} />}&nbsp;&nbsp;&nbsp;&nbsp;
           <p style={{ display: "inline" }}>Backlog: {this.state.backlog[this.userIndex]}</p>
         </div>
         {!this.state.judgeMode &&
           <div >
-            <p style={{ fontSize: "20px", color: "Tomato", marginTop: "15px", marginBottom: "10px" }}>Target: {this.state.target}</p>
+            <p style={{ fontSize: "20px", color: "#DB3838", marginTop: "15px", marginBottom: "10px" }}>Target: {this.state.target}</p>
             {(this.state.backlog[this.userIndex] !== 0 || !this.madeMove) && 
               <Board
                 roundDone={this.state.roundDone}
@@ -413,7 +413,7 @@ class Game extends React.Component {
         }
         {this.state.judgeMode &&
           <div >
-            <p style={{ fontSize: "20px", color: "Tomato", marginTop: "30px", marginBottom: "10px" }}>Guess who wrote your fav answer</p>
+            <p style={{ fontSize: "20px", color: "#DB3838", marginTop: "30px", marginBottom: "10px" }}>Guess who wrote your fav answer</p>
             <Board
               roundDone={false}
               blanks={this.props.occupants - 1}

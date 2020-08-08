@@ -42,24 +42,26 @@ class App extends Component {
         // someone joined the lobby
         if (msg.message.name != null && this.state.isRoomCreator && !this.state.isPlaying) {
           if (!this.state.players.includes(msg.message.name)) {
-            this.occupants++;
-            var startIsDisabled = true;
-            if (this.occupants > 2) {
-              startIsDisabled = false;
+            if (this.occupants <= 10) {
+              this.occupants++;
+              var startIsDisabled = true;
+              if (this.occupants > 2) {
+                startIsDisabled = false;
+              }
+              this.setState((state) => {
+                var players = state.players;
+                players.push(msg.message.name);
+                return {
+                  startIsDisabled: startIsDisabled,
+                  players: players
+                };
+              })
             }
-            this.setState((state) => {
-              var players = state.players;
-              players.push(msg.message.name);
-              return {
-                startIsDisabled: startIsDisabled,
-                players: players
-              };
-            })
           }
         }
 
         //start game
-        if (msg.message.start && msg.message.occupants >= 3) {
+        if (msg.message.start && msg.message.occupants >= 3 && msg.message.occupants <= 10) {
           if (msg.message.players.includes(this.state.name)) {
             this.occupants = msg.message.occupants;
             this.pubnub.subscribe({
@@ -108,7 +110,7 @@ class App extends Component {
       });
     }
   }
-  
+
   componentWillUnmount() {
     this.pubnub.unsubscribe({
       channels: [this.lobbyChannel, this.state.gameChannel]

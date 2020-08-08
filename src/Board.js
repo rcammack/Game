@@ -1,5 +1,6 @@
 import React from 'react';
 import Form from './Form';
+const colors = ['#40A4DB','#33BEB8','#B2C225','#FECC30','#F9A228','#F6621F','#DB3838','#EE657A','#A363DA'];
 
 class Board extends React.Component {
 
@@ -26,7 +27,8 @@ class Board extends React.Component {
             answer={this.props.answers[i]}
             onClick={(value) => this.props.onClick(i, value)}
             onQuestionRefresh={() => this.props.onQuestionRefresh(i)}
-            refresh={this.props.refresh} />
+            refresh={this.props.refresh}
+            color={(i >= 0 && i < colors.length) ? colors[i] : '#dddddd'} />
         }
         {((this.props.answers[i] !== "" && !this.props.judgeMode) || (this.props.roundDone && !this.props.judgeMode)) &&
           <div>
