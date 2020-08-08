@@ -18,7 +18,6 @@ class App extends Component {
       players: [],
       isPlaying: false,
       isRoomCreator: false,
-      createIsDisabled: false,
       startIsDisabled: true,
       gameChannel: null,
       winningScore: 8,
@@ -39,7 +38,9 @@ class App extends Component {
   componentDidUpdate() {
     if (this.lobbyChannel != null) {
       this.pubnub.getMessage(this.lobbyChannel, (msg) => {
-        if (msg.message.name != null && this.state.isRoomCreator) {
+
+        // someone joined the lobby
+        if (msg.message.name != null && this.state.isRoomCreator && !this.state.isPlaying) {
           if (!this.state.players.includes(msg.message.name)) {
             this.occupants++;
             var startIsDisabled = true;
@@ -56,6 +57,8 @@ class App extends Component {
             })
           }
         }
+
+        //start game
         if (msg.message.start && msg.message.occupants >= 3) {
           if (msg.message.players.includes(this.state.name)) {
             this.occupants = msg.message.occupants;
@@ -74,9 +77,27 @@ class App extends Component {
             });
           }
         }
+
+        //check removed player
+        if (msg.message.removedPlayer) {
+          if (msg.message.removedPlayer === this.state.name) {
+            this.pubnub.unsubscribe({
+              channels: [this.lobbyChannel]
+            });
+
+            this.lobbyChannel = null;
+            this.roomId = null;
+
+            this.setState({
+              name: "",
+              gameChannel: null,
+            });
+          }
+        }
       });
     }
 
+    //joined the game
     if (this.state.gameChannel != null) {
       this.pubnub.getPresence(this.state.gameChannel, presence => {
         if (presence.action === "join") {
@@ -87,7 +108,7 @@ class App extends Component {
       });
     }
   }
-
+  
   componentWillUnmount() {
     this.pubnub.unsubscribe({
       channels: [this.lobbyChannel, this.state.gameChannel]
@@ -95,7 +116,7 @@ class App extends Component {
   }
 
   // Create a room channel
-  onPressCreate = (e) => {
+  onCreate = (e) => {
     // Create a random name for the channel
     this.roomId = shortid.generate().substring(0, 5);
     this.lobbyChannel = 'tictactoelobby--' + this.roomId;
@@ -109,6 +130,7 @@ class App extends Component {
     Swal.fire({
       position: 'top',
       input: 'text',
+      inputValue: window.localStorage.getItem('player') ?? "",
       allowOutsideClick: false,
       inputPlaceholder: 'Enter your name',
       showCancelButton: true,
@@ -127,16 +149,20 @@ class App extends Component {
       if (result.value) {
         var players = [];
         players.push(result.value);
+        window.localStorage.setItem('player', result.value);
+
         this.setState({
           name: result.value,
           players: players,
           isRoomCreator: true,
-          createIsDisabled: true, // Disable the 'Create' button
         })
       } else {
         this.pubnub.unsubscribe({
           channels: [this.lobbyChannel]
         });
+        this.roomId = null;
+        this.lobbyChannel = null;
+        this.occupants = 0;
       }
     })
   }
@@ -181,6 +207,7 @@ class App extends Component {
     Swal.fire({
       position: 'top',
       input: 'text',
+      inputValue: window.localStorage.getItem('player') ?? "",
       allowOutsideClick: false,
       inputPlaceholder: 'Enter your name',
       showCancelButton: true,
@@ -197,6 +224,8 @@ class App extends Component {
     }).then((result) => {
       // Check if the user typed a value in the input field
       if (result.value) {
+        window.localStorage.setItem('player', result.value);
+
         this.setState({
           name: result.value,
         })
@@ -242,6 +271,14 @@ class App extends Component {
     if (this.occupants < 3) {
       startIsDisabled = true;
     }
+
+    this.pubnub.publish({
+      message: {
+        removedPlayer: player
+      },
+      channel: this.lobbyChannel
+    });
+
     this.setState((state) => {
       var players = state.players;
       players.splice(state.players.indexOf(player), 1);
@@ -267,7 +304,6 @@ class App extends Component {
       players: [],
       isPlaying: false,
       isRoomCreator: false,
-      createIsDisabled: false,
       startIsDisabled: true,
       gameChannel: null,
       winningScore: 8,
@@ -296,8 +332,7 @@ class App extends Component {
                   <button
                     className="ui button"
                     style={{ width: "90px" }}
-                    disabled={this.state.createIsDisabled}
-                    onClick={(e) => this.onPressCreate()}
+                    onClick={(e) => this.onCreate()}
                   > Create
                   </button>
                   <div className="or"></div>
@@ -315,7 +350,7 @@ class App extends Component {
                 <div style={{ margin: "auto", textAlign: "center" }}>
                   <label>Points to win: </label>
                   <select style={{ marginBottom: "15px" }} value={this.state.winningScore} onChange={this.handleChange}>
-                    {[2,5,8,10,15,20].map((value) => <option key={value} value={value}>{value}</option>)}
+                    {[2, 5, 8, 10, 15, 20].map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
                   <br />
                   <button

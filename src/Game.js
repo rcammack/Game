@@ -75,7 +75,7 @@ class Game extends React.Component {
         });
       }
 
-      //refresh questions
+      //refresh question
       if (msg.message.newIndex) {
         this.setState((state) => {
           var questionsList = state.questionsList;
@@ -95,6 +95,7 @@ class Game extends React.Component {
 
       // update scores / done judging? / new round?
       else if (msg.message.judge) {
+        this.madeMove = false; //reset madeMove here since questions visibility relies on it after submitting guess
         this.judgeCount++;
         var winners = [];
 
@@ -141,7 +142,7 @@ class Game extends React.Component {
           answerers[msg.message.oldTargetIndex][msg.message.index] = msg.message.name;
 
           //update backlog (prev person+1, current person-1)
-          backlog[msg.message.userIndex] = backlog[msg.message.userIndex] - 1;
+          backlog[msg.message.userIndex] = backlog[msg.message.userIndex] <= 0 ? 0 : backlog[msg.message.userIndex] - 1;
           var prevIndex = msg.message.userIndex - 1;
           if (prevIndex < 0) {
             prevIndex = this.players.length - 1;
@@ -392,7 +393,7 @@ class Game extends React.Component {
         {!this.state.judgeMode &&
           <div >
             <p style={{ fontSize: "20px", color: "Tomato", marginTop: "15px", marginBottom: "10px" }}>Target: {this.state.target}</p>
-            {this.state.backlog[this.userIndex] !== 0 &&
+            {(this.state.backlog[this.userIndex] !== 0 || !this.madeMove) && 
               <Board
                 roundDone={this.state.roundDone}
                 blanks={this.props.occupants - 1}
@@ -405,7 +406,7 @@ class Game extends React.Component {
                 refresh={this.props.isRoomCreator && !this.madeMove}
               />
             }
-            {this.state.backlog[this.userIndex] === 0 && //includes if you're waiting for your own sheet back
+            {this.state.backlog[this.userIndex] === 0 && this.madeMove && //includes if you're waiting for your own sheet back
               <p>waiting...</p>
             }
           </div>
