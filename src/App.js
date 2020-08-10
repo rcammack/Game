@@ -28,11 +28,11 @@ class App extends Component {
     this.roomId = null;
     this.pubnub.init(this);
 
-    // this.pubnub.addListener({
-    //   message: function (msg) {
-    //     console.log("listener: message in ", msg.channel, msg.message);
-    //   }
-    // })
+    this.pubnub.addListener({
+      message: function (msg) {
+        console.log("listener: message in ", msg.channel, msg.message);
+      }
+    })
   }
 
   componentDidUpdate() {
@@ -134,17 +134,15 @@ class App extends Component {
       input: 'text',
       inputValue: window.localStorage.getItem('player') ?? "",
       allowOutsideClick: false,
-      inputPlaceholder: 'Enter your name',
+      title: 'Enter your name',
       showCancelButton: true,
       confirmButtonColor: 'rgb(208,33,41)',
       confirmButtonText: 'OK',
       width: 275,
       padding: '0.7em',
       customClass: {
-        heightAuto: false,
-        popup: 'popup-class',
-        confirmButton: 'join-button-class',
-        cancelButton: 'join-button-class'
+        heightAuto: true,
+        widthAuto: true,
       }
     }).then((result) => {
       // Check if the user typed a value in the input field
@@ -182,10 +180,8 @@ class App extends Component {
       width: 275,
       padding: '0.7em',
       customClass: {
-        heightAuto: false,
-        popup: 'popup-class',
-        confirmButton: 'join-button-class',
-        cancelButton: 'join-button-class'
+        heightAuto: true,
+        widthAuto: true,
       }
     }).then((result) => {
       // Check if the user typed a value in the input field
@@ -209,6 +205,7 @@ class App extends Component {
     Swal.fire({
       position: 'top',
       input: 'text',
+      title: 'Enter your name',
       inputValue: window.localStorage.getItem('player') ?? "",
       allowOutsideClick: false,
       inputPlaceholder: 'Enter your name',
@@ -218,10 +215,8 @@ class App extends Component {
       width: 275,
       padding: '0.7em',
       customClass: {
-        heightAuto: false,
-        popup: 'popup-class',
-        confirmButton: 'join-button-class',
-        cancelButton: 'join-button-class'
+        heightAuto: true,
+        widthAuto: true,
       }
     }).then((result) => {
       // Check if the user typed a value in the input field

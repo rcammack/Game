@@ -318,7 +318,7 @@ class Game extends React.Component {
   }
 
   onWin = (winners) => {
-    let title = (winners.length > 1) ? `Tie! Winners are ${winners.toString()}` : `${winners[0]} wins!`;
+    let title = (winners.length > 1) ? `Tie! Winners are ${winners.join(', ')}` : `${winners[0]} wins!`;
     // pop up for room creator
     if (this.props.isRoomCreator) {
       Swal.fire({
@@ -333,11 +333,8 @@ class Game extends React.Component {
         confirmButtonText: 'Yea!',
         width: 275,
         customClass: {
-          heightAuto: false,
-          title: 'title-class',
-          popup: 'popup-class',
-          confirmButton: 'button-class',
-          cancelButton: 'button-class'
+          heightAuto: true,
+          widthAuto: true,
         },
       }).then((result) => {
         // Start a new round
@@ -367,14 +364,12 @@ class Game extends React.Component {
         position: 'top',
         allowOutsideClick: false,
         title: title,
-        text: 'Waiting for a new round...',
+        text: 'Waiting for room creator to start a new round...',
         confirmButtonColor: 'rgb(208,33,41)',
         width: 275,
         customClass: {
-          heightAuto: false,
-          title: 'title-class',
-          popup: 'popup-class',
-          confirmButton: 'button-class',
+          heightAuto: true,
+          widthAuto: true,
         },
       });
     }
