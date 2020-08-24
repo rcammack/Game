@@ -26,6 +26,7 @@ class App extends Component {
     this.occupants = 0;
     this.lobbyChannel = null;
     this.roomId = null;
+    this.loading = false;
     this.pubnub.init(this);
 
     this.pubnub.addListener({
@@ -103,6 +104,7 @@ class App extends Component {
     if (this.state.gameChannel != null) {
       this.pubnub.getPresence(this.state.gameChannel, presence => {
         if (presence.action === "join") {
+          this.loading = false;
           this.setState({
             isPlaying: true,
           });
@@ -243,6 +245,8 @@ class App extends Component {
   onPressStart = (e) => {
     // Check that the player is connected to a channel
     if (this.lobbyChannel != null) {
+      this.loading = true;
+
       // Create a different channel for the game
       var gameChannel = 'tictactoegame--' + this.roomId;
 
@@ -295,6 +299,7 @@ class App extends Component {
     this.occupants = 0;
     this.lobbyChannel = null;
     this.roomId = null;
+    this.loading = false;
 
     this.setState({
       name: "",
@@ -354,8 +359,9 @@ class App extends Component {
                     className="ui button"
                     style={{ marginBottom: "15px" }}
                     disabled={this.state.startIsDisabled}
-                    onClick={(e) => this.onPressStart()}
-                  > Start
+                    onClick={(e) => this.onPressStart()}>
+                    {this.loading && <i className="spinner loading icon" style={{ margin: "auto" }} />}
+                    {!this.loading && 'Start'}
                   </button>
                   {this.state.players.map((player, i) =>
                     <div style={{ textAlign: "left" }} key={i}>
