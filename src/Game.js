@@ -179,6 +179,29 @@ class Game extends React.Component {
         this.props.endGame();
       }
     });
+
+    //check for missed messages on mount
+    if (!this.props.isRoomCreator) {
+      this.props.pubnub.fetchMessages(
+        {
+          channels: [this.props.gameChannel],
+          count: 1
+        },
+        (status, response) => {
+          console.log("last message was...", response);
+          for (var channel in response.channels) {
+            var message = response.channels[channel][0].message;
+            if (message.questions) {
+              console.log("MISSED QUESTIONS PUBLISH");
+              this.setState({
+                questionsList: message.questionsList,
+                questions: message.questions,
+              });
+            }
+          }
+        }
+      )
+    }
   }
 
   shuffleQuestionsList() {
@@ -388,7 +411,7 @@ class Game extends React.Component {
         {!this.state.judgeMode &&
           <div >
             <p style={{ fontSize: "20px", color: "#DB3838", marginTop: "15px", marginBottom: "10px" }}>Target: {this.state.target}</p>
-            {(this.state.backlog[this.userIndex] !== 0 || !this.madeMove) && 
+            {(this.state.backlog[this.userIndex] !== 0 || !this.madeMove) &&
               <Board
                 roundDone={this.state.roundDone}
                 blanks={this.props.occupants - 1}

@@ -247,6 +247,10 @@ class App extends Component {
     if (this.lobbyChannel != null) {
       this.loading = true;
 
+      this.setState({
+        startIsDisabled: true,
+      });
+
       // Create a different channel for the game
       var gameChannel = 'tictactoegame--' + this.roomId;
 
